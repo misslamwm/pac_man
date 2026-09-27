@@ -54,7 +54,7 @@ const QUESTIONS = {
         { q: "y^{-5} \\times y^9", options: ["y^4", "y^{-14}", "1/y^4", "y^{45}"], ans: "y^4", explanation: "負數與正數的相加運算：底數相同相乘，指數相加為 -5 + 9 = 4。" },
         { q: "a^2 \\div a^{-4}", options: ["a^6", "a^{-2}", "1/a^2", "a^{-6}"], ans: "a^6", explanation: "同底相除，指數相減：2 - (-4) = 2 + 4 = 6。注意雙重負號產生的加法！" },
         { q: "(p^{-3})^4", options: ["1/p^{12}", "p^{-7}", "p^{12}", "-p^{12}"], ans: "1/p^{12}", explanation: "乘方的乘方指數相乘：-3 \\times 4 = -12。再將負指數轉換為倒數分數形式：1 / p^{12}。" },
-        { q: "4b^0 (b \\neq 0)", options: ["4", "1", "0", "4b"], ans: "4", explanation: "要區分 4(b^0) 與 (4b)^0，只有緊鄰的底數 b受 0 次方影響：4 \\times b^0 = 4 \\times 1 = 4。" },
+        { q: "4b^0 (b \\neq 0)", options: ["4", "1", "0", "4b"], ans: "4", explanation: "要區分 4(b^0) 與 (4b)^0，只有緊鄰的底數 b 受 0 次方影響：4 \\times b^0 = 4 \\times 1 = 4。" },
         { q: "w^{-6} \\times w^6", options: ["1", "w^{12}", "w^{-12}", "0"], ans: "1", explanation: "指數相加為 0：-6 + 6 = 0。進而 w^0 轉化為 1。" },
         { q: "(xy)^{-2}", options: ["1/(x^2y^2)", "x^{-2}y^{-2}", "-x^2y^2", "x^2y^2"], ans: "1/(x^2y^2)", explanation: "積的乘方分配：x^{-2}y^{-2}，再將負指數化為分母倒數分式：1 / (x^2y^2)。" },
         { q: "(a^{-2})^{-3}", options: ["a^6", "a^{-5}", "1/a^6", "a^{-6}"], ans: "a^6", explanation: "負負得正的指數相乘：-2 \\times (-3) = 6，故結果為 a^6。" },
@@ -112,11 +112,8 @@ const ghostColors = ["#ff0000", "#ffb8ff", "#00ffff", "#ffb852"]; // 紅、粉�
 // 防二次觸發鎖
 let isTransitioning = false;
 
-// === 【新增】：計分與 30 秒倒數計時狀態變數 ===
-let questionStartTime = 0; // 記錄當前題目開始的時間戳記
-let isRetry = false;       // 標記當前題目是否處於「答錯重新挑戰」狀態
-
 // 4. 輔助函數：將分數上標格式、LaTeX 乘除號轉換為 Unicode 數學字型
+// 【特別修正】：徹底破除電腦次方符號 '^'，利用正則表達式精準將任何 '^' 後續的整數或括號完美替換為學術上標字元！
 // ============================================================================
 // 【特別修正】：徹底破除電腦次方符號 '^'，完美將任何 '^' 與 LaTeX 格式轉為數學上標
 // ============================================================================
@@ -407,11 +404,6 @@ function loadQuestion() {
     }
     
     isTransitioning = false;
-
-    // 只有在新題目時才記錄開始時間，重答時不重置計時
-    if (!isRetry) {
-        questionStartTime = Date.now();
-    }
 }
 
 function renderMathQuestion(latex) {
@@ -440,10 +432,6 @@ function startGame(level) {
     hp = 3;
     gameOver = false;
     isTransitioning = false;
-
-    // 重設重答狀態，並記錄首題開始時間
-    isRetry = false;
-    questionStartTime = Date.now();
 
     // 【應需求修改】第二關轉深紫色背景
     const wrapper = document.getElementById('gameWrapper');
@@ -531,43 +519,35 @@ function triggerWrongAnswerExplanation(chosenLabel, correctAns, explanationText)
     showOverlay('explanationOverlay');
 }
 // ============================================================================
-// 🆕 【全新新增】：知識重溫頁面的開啟與關閉控制邏輯
-// ============================================================================
-function openRevision(referrer) {
-    revisionReferrer = referrer;
-    
-    // 隱藏來源畫面 (主目錄或 GameOver)
-    const refEl = document.getElementById(referrer);
-    if (refEl) refEl.style.display = 'none';
-    
-    // 顯示知識重溫視窗
-    const revEl = document.getElementById('revisionOverlay');
-    if (revEl) revEl.style.display = 'flex';
-}
-
-function closeRevision() {
-    // 隱藏知識重溫視窗
-    const revEl = document.getElementById('revisionOverlay');
-    if (revEl) revEl.style.display = 'none';
-    
-    // 恢復顯示剛才過來的那個畫面
-    const refEl = document.getElementById(revisionReferrer);
-    if (refEl) refEl.style.display = 'flex';
-}
-
-// ============================================================================
-// 【全新新增】：當學生點擊「我學會了！重新挑戰此題 ➔」按鈕時調用的函數
+// 【全新新增】：當學生點擊「我學會了！繼續下一題 ➔」按鈕時調用的函數
 // ============================================================================
 function closeExplanationOverlay() {
     // 1. 隱藏答錯教學卡
     document.getElementById('explanationOverlay').style.display = 'none';
     
-    // 2. 重新載入原題目（此時 isRetry 為 true，所以不會重設30秒計時，也不會前進下一題）
+    // 2. 答錯後依然將題數加 1，順利進入下一題
+    currentQuestionIndex++;
+    
+    // 3. 【防禦判定】：檢查是否已經是本關最後一題
+    const qList = QUESTIONS[currentLevel];
+    if (currentQuestionIndex >= qList.length) {
+        // 如果已經完成所有題目（不論最後一題是對是錯），顯示相應的通關畫面
+        if (currentLevel === 1) {
+            showOverlay('nextLevelOverlay');
+        } else {
+            showOverlay('victoryOverlay');
+        }
+        // 徹底清除計時器，阻斷後台遊戲循環，確保點擊「進入下一關」按鈕能正常運作
+        if (gameInterval) clearInterval(gameInterval);
+        return; // 直接結束函數，不重啟下方的遊戲計時器
+    }
+    
+    // 4. 重啟遊戲（順利載入下一題）
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     loadQuestion();
     
-    // 3. 重啟遊戲計時器
+    // 重啟遊戲計時器
     if (gameInterval) clearInterval(gameInterval);
     gameInterval = setInterval(() => {
         updateGame(ctx, canvas);
@@ -592,30 +572,10 @@ function updateGame(ctx, canvas) {
                 isTransitioning = true; 
 
                 if (ghost.isCorrect) {
-                    // === 全新計分規則：速通加分與重試減半 ===
-                    let earnedScore = 0;
-                    
-                    if (isRetry) {
-                        // 答錯重新回答：分數減半，僅得 500 分
-                        earnedScore = 500;
-                    } else {
-                        // 首次答對：基礎分 1000 分
-                        earnedScore = 1000;
-                        
-                        // 30 秒內答對：額外加贈 500 分 Bonus (合計 1500 分)
-                        const timeElapsed = (Date.now() - questionStartTime) / 1000;
-                        if (timeElapsed <= 30) {
-                            earnedScore += 500;
-                        }
-                    }
-                    
-                    score += earnedScore;
+                    // 【應需求修改】：每次答對一題加 100 分！
+                    score += 100;
                     document.getElementById('scoreVal').innerText = score;
-                    
-                    // 答對才遞增題目索引，並重設重答狀態
                     currentQuestionIndex++;
-                    isRetry = false;
-                    
                     drawScreenFlash(ctx, canvas, "rgba(57, 255, 20, 0.3)");
                     
                     setTimeout(() => {
@@ -632,8 +592,7 @@ function updateGame(ctx, canvas) {
                         showOverlay('gameOverOverlay');
                         if (gameInterval) clearInterval(gameInterval);
                     } else {
-                        // 答錯時設定重答標記，並彈出教學解析卡
-                        isRetry = true;
+                        // 【應需求修改】答錯時彈出分析讲解，點擊按鈕才能繼續
                         const curQObj = QUESTIONS[currentLevel][currentQuestionIndex];
                         triggerWrongAnswerExplanation(ghost.label, curQObj.ans, curQObj.explanation);
                     }
@@ -729,8 +688,7 @@ function showOverlay(id) {
 }
 
 function hideAllOverlays() {
-// 🆕 加上 'revisionOverlay'，確保新視窗也能在重啟關卡時被正確隱藏
-    const overlays = ['startOverlay', 'explanationOverlay', 'nextLevelOverlay', 'gameOverOverlay', 'victoryOverlay', 'revisionOverlay'];
+    const overlays = ['startOverlay', 'explanationOverlay', 'nextLevelOverlay', 'gameOverOverlay', 'victoryOverlay'];
     overlays.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = 'none';
