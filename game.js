@@ -530,6 +530,30 @@ function triggerWrongAnswerExplanation(chosenLabel, correctAns, explanationText)
     // C. 顯示答錯卡 Overlay
     showOverlay('explanationOverlay');
 }
+// ============================================================================
+// 🆕 【全新新增】：知識重溫頁面的開啟與關閉控制邏輯
+// ============================================================================
+function openRevision(referrer) {
+    revisionReferrer = referrer;
+    
+    // 隱藏來源畫面 (主目錄或 GameOver)
+    const refEl = document.getElementById(referrer);
+    if (refEl) refEl.style.display = 'none';
+    
+    // 顯示知識重溫視窗
+    const revEl = document.getElementById('revisionOverlay');
+    if (revEl) revEl.style.display = 'flex';
+}
+
+function closeRevision() {
+    // 隱藏知識重溫視窗
+    const revEl = document.getElementById('revisionOverlay');
+    if (revEl) revEl.style.display = 'none';
+    
+    // 恢復顯示剛才過來的那個畫面
+    const refEl = document.getElementById(revisionReferrer);
+    if (refEl) refEl.style.display = 'flex';
+}
 
 // ============================================================================
 // 【全新新增】：當學生點擊「我學會了！重新挑戰此題 ➔」按鈕時調用的函數
@@ -705,7 +729,8 @@ function showOverlay(id) {
 }
 
 function hideAllOverlays() {
-    const overlays = ['startOverlay', 'explanationOverlay', 'nextLevelOverlay', 'gameOverOverlay', 'victoryOverlay'];
+// 🆕 加上 'revisionOverlay'，確保新視窗也能在重啟關卡時被正確隱藏
+    const overlays = ['startOverlay', 'explanationOverlay', 'nextLevelOverlay', 'gameOverOverlay', 'victoryOverlay', 'revisionOverlay'];
     overlays.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = 'none';
