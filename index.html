@@ -316,7 +316,7 @@
             box-shadow: 0 0 35px var(--neon-blue);
         }
 
-        /* 響應式佈局 */
+        /* 當螢幕較窄 (如手機、直向手持 iPad) 時，自適應垂直佈局 */
         @media (max-width: 820px) {
             .game-wrapper {
                 flex-direction: column;
@@ -353,11 +353,11 @@
         <div class="button-group">
             <button class="btn-start" onclick="startGame(1)">
                 Level 1 基礎指數定律<br>
-               
+                <span style="font-size:0.9rem; font-weight:normal; opacity:0.8;">1(b) 基礎公式定律</span>
             </button>
             <button class="btn-start btn-level2" onclick="startGame(2)">
                 Level 2 進階指數定律<br>
-               
+                <span style="font-size:0.9rem; font-weight:normal; opacity:0.8;">1(a) & 1(b) 綜合大進擊</span>
             </button>
         </div>
     </div>
