@@ -114,56 +114,56 @@ let isTransitioning = false;
 
 // 4. 輔助函數：將分數上標格式、LaTeX 乘除號轉換為 Unicode 數學字型
 // 【特別修正】：徹底破除電腦次方符號 '^'，利用正則表達式精準將任何 '^' 後續的整數或括號完美替換為學術上標字元！
+// ============================================================================
+// 【特別修正】：徹底破除電腦次方符號 '^'，完美將任何 '^' 與 LaTeX 格式轉為數學上標
+// ============================================================================
 function formatLatexToUnicode(str) {
     if (!str) return "";
     let res = str;
     
-    // 替換數學常用乘除符號
+    // 1. 替換數學常用乘除符號與不等號
     res = res.replace(/\\times/g, ' × ');
     res = res.replace(/\\div/g, ' ÷ ');
     res = res.replace(/\\cdot/g, ' · ');
     res = res.replace(/\\neq/g, ' ≠ ');
     
-    // 替換分數 \frac{A}{B} 格式
+    // 2. 替換分數 \frac{A}{B} 格式
     res = res.replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '$1/$2');
-    res = res.replace(/[{}]/g, ''); // 移除多餘 LaTeX 大括號
     
-    // Unicode 上標對照表 (完整支援任何字母與正負符號)
+    // 完整 Unicode 上標對照表 (完美支援數字、負號、英文字母與括號)
     const superscripts = {
         '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴', 
         '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹',
         '-': '⁻', 'a': 'ᵃ', 'b': 'ᵇ', 'n': 'ⁿ', 'm': 'ᵐ',
-        'x': 'ˣ', 'y': 'ʸ'
+        'x': 'ˣ', 'y': 'ʸ', 'p': 'ᵖ', 'q': 'ᵠ', 'u': 'ᵘ', 'v': 'ᵛ',
+        '(': '⁽', ')': '⁾', '+': '⁺'
     };
-    
-    let output = "";
-    for (let i = 0; i < res.length; i++) {
-        if (res[i] === '^') {
-            i++;
-            let power = "";
-            if (res[i] === '(') {
-                i++;
-                while (i < res.length && res[i] !== ')') {
-                    power += res[i];
-                    i++;
-                }
-            } else {
-                while (i < res.length && /[a-zA-Z0-9\\-–]/.test(res[i])) {
-                    power += res[i];
-                    i++;
-                }
-                i--; // 退回一步
-            }
-            
-            for (let char of power) {
-                output += superscripts[char] || char;
-            }
-        } else {
-            output += res[i];
+
+    // 內部輔助函數：將字串內的所有字元完美轉為 Unicode 數學上標
+    function toSuperscript(text) {
+        let output = "";
+        for (let char of text) {
+            output += superscripts[char] || char;
         }
+        return output;
     }
-    return output;
+
+    // 3. 優先處理具有大括號的 LaTeX 次方格式，例如：x^{-3} -> x⁻³
+    res = res.replace(/\^\{([^}]+)\}/g, function(match, p1) {
+        return toSuperscript(p1);
+    });
+    
+    // 4. 處理單個字元的電腦次方格式，例如：a^5 -> a⁵
+    res = res.replace(/\^([a-zA-Z0-9\-+])/g, function(match, p1) {
+        return toSuperscript(p1);
+    });
+
+    // 5. 清理殘留的大括號
+    res = res.replace(/[{}]/g, '');
+
+    return res;
 }
+
 
 // 吃豆人類別 (Pacman)
 class Pacman {
@@ -486,7 +486,7 @@ function setDirection(dir) {
     }
 }
 
-// 7. 【答錯防禦講解模態框控制】
+// 【修改】：答錯防禦診斷卡控制 - 將診斷說明中的電腦公式也轉換為漂亮的數學格式
 function triggerWrongAnswerExplanation(chosenLabel, correctAns, explanationText) {
     // A. 停止主遊戲循環
     if (gameInterval) clearInterval(gameInterval);
@@ -500,39 +500,23 @@ function triggerWrongAnswerExplanation(chosenLabel, correctAns, explanationText)
     
     // 渲染 LaTeX 目標
     if (typeof katex !== 'undefined') {
-        katex.render(curQ.q, wrongQEl, { throwOnError: false });
-        katex.render(correctAns, wrongAnEl, { throwOnError: false });
+        try {
+            katex.render(curQ.q, wrongQEl, { throwOnError: false });
+            katex.render(correctAns, wrongAnEl, { throwOnError: false });
+        } catch (err) {
+            wrongQEl.innerText = formatLatexToUnicode(curQ.q);
+            wrongAnEl.innerText = formatLatexToUnicode(correctAns);
+        }
     } else {
         wrongQEl.innerText = formatLatexToUnicode(curQ.q);
         wrongAnEl.innerText = formatLatexToUnicode(correctAns);
     }
     
-    // 載入教師迷宮防禦 analysis 講解
-    explanationBody.innerText = explanationText;
+    // 【關鍵修正】：載入教學分析講解時，套用格式化函數，將 a^{-15} 或 a^0 等電腦與 LaTeX 格式完美轉換
+    explanationBody.innerText = formatLatexToUnicode(explanationText);
 
     // C. 顯示答錯卡 Overlay
     showOverlay('explanationOverlay');
-}
-
-// 學生點擊「我懂了！繼續下一題」按鈕後觸發
-function closeExplanationOverlay() {
-    // 隱藏答錯卡
-    document.getElementById('explanationOverlay').style.display = 'none';
-    
-    // 答錯進入下一題
-    currentQuestionIndex++;
-    
-    // 重啟遊戲
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
-    loadQuestion();
-    
-    if (gameInterval) clearInterval(gameInterval);
-    gameInterval = setInterval(() => {
-        updateGame(ctx, canvas);
-    }, 1000 / 60);
-    
-    canvas.focus();
 }
 
 // 8. 主引擎更新
