@@ -1,3 +1,35 @@
+// 圓角矩形相容性補丁 (Polyfill for older desktop browsers)
+if (typeof CanvasRenderingContext2D.prototype.roundRect !== 'function') {
+    CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, radii) {
+        if (!radii) radii = 0;
+        if (typeof radii === 'number') {
+            radii = [radii, radii, radii, radii];
+        } else if (Array.isArray(radii)) {
+            if (radii.length === 1) radii = [radii[0], radii[0], radii[0], radii[0]];
+            else if (radii.length === 2) radii = [radii[0], radii[1], radii[0], radii[1]];
+            else if (radii.length === 3) radii = [radii[0], radii[1], radii[2], radii[1]];
+        } else {
+            radii = [0, 0, 0, 0];
+        }
+        
+        let r0 = radii[0];
+        let r1 = radii[1];
+        let r2 = radii[2];
+        let r3 = radii[3];
+        
+        this.moveTo(x + r0, y);
+        this.lineTo(x + w - r1, y);
+        this.quadraticCurveTo(x + w, y, x + w, y + r1);
+        this.lineTo(x + w, y + h - r2);
+        this.quadraticCurveTo(x + w, y + h, x + w - r2, y + h);
+        this.lineTo(x + r3, y + h);
+        this.quadraticCurveTo(x, y + h, x, y + h - r3);
+        this.lineTo(x, y + r0);
+        this.quadraticCurveTo(x, y, x + r0, y);
+        this.closePath();
+    };
+}
+
 // ============================================================================
 // 指數吃豆人：跨平台終極挑戰 (Indices PAC-MAN Ultimate) - 核心遊戲引擎
 // ============================================================================
@@ -475,7 +507,7 @@ function triggerWrongAnswerExplanation(chosenLabel, correctAns, explanationText)
         wrongAnEl.innerText = formatLatexToUnicode(correctAns);
     }
     
-    // 載入教師迷宮防禦分析講解
+    // 載入教師迷宮防禦 analysis 講解
     explanationBody.innerText = explanationText;
 
     // C. 顯示答錯卡 Overlay
