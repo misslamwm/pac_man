@@ -437,12 +437,14 @@
     <!-- 下一關過渡 Overlay -->
     <div class="overlay" id="nextLevelOverlay" style="display: none;">
         <div class="overlay-title" style="color: var(--neon-blue); text-shadow: 0 0 15px var(--neon-blue)">🎉 第一關挑戰成功！</div>
+              <!-- 【修改】：將過渡畫面的 LaTeX 原文替換為優雅的數學上標 -->
         <div class="overlay-desc" id="nextLevelDesc">
             做得太棒了！你完美掌握了整數指數定律的五大基礎公式。<br><br>
             準備好進入<b>「第二關：終極指數大師」</b>了嗎？<br>
-            第二關將加入 <b>零指數 ($a^0=1$)</b> 與 <b>負指數 ($a^{-n} = \frac{1}{a^n}$)</b> 混合運算！<br><br>
+            第二關將加入 <b>零指數 (<i>a</i>⁰ = 1)</b> 與 <b>負指數 (<i>a</i>⁻ⁿ = 1/<i>a</i>ⁿ)</b> 混合運算！<br><br>
             進入下一關時，你的生命值將<b>重新恢復為 ❤️❤️❤️ (3 HP 滿血狀態)</b>！
         </div>
+
         <div class="button-group">
             <button class="btn-start" style="border-color: var(--neon-blue); text-shadow: 0 0 8px var(--neon-blue);" onclick="startGame(2)">進入第二關 (Level 2)</button>
             <button class="btn-start" style="border-color: #aaa; color: #aaa; text-shadow: none;" onclick="resetToHome()">返回主選單</button>
