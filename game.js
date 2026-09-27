@@ -518,6 +518,43 @@ function triggerWrongAnswerExplanation(chosenLabel, correctAns, explanationText)
     // C. 顯示答錯卡 Overlay
     showOverlay('explanationOverlay');
 }
+// ============================================================================
+// 【全新新增】：當學生點擊「我學會了！繼續下一題 ➔」按鈕時調用的函數
+// ============================================================================
+function closeExplanationOverlay() {
+    // 1. 隱藏答錯教學卡
+    document.getElementById('explanationOverlay').style.display = 'none';
+    
+    // 2. 答錯後依然將題數加 1，順利進入下一題
+    currentQuestionIndex++;
+    
+    // 3. 【防禦判定】：檢查是否已經是本關最後一題
+    const qList = QUESTIONS[currentLevel];
+    if (currentQuestionIndex >= qList.length) {
+        // 如果已經完成所有題目（不論最後一題是對是錯），顯示相應的通關畫面
+        if (currentLevel === 1) {
+            showOverlay('nextLevelOverlay');
+        } else {
+            showOverlay('victoryOverlay');
+        }
+        // 徹底清除計時器，阻斷後台遊戲循環，確保點擊「進入下一關」按鈕能正常運作
+        if (gameInterval) clearInterval(gameInterval);
+        return; // 直接結束函數，不重啟下方的遊戲計時器
+    }
+    
+    // 4. 重啟遊戲（順利載入下一題）
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    loadQuestion();
+    
+    // 重啟遊戲計時器
+    if (gameInterval) clearInterval(gameInterval);
+    gameInterval = setInterval(() => {
+        updateGame(ctx, canvas);
+    }, 1000 / 60);
+    
+    canvas.focus();
+}
 
 // 8. 主引擎更新
 function updateGame(ctx, canvas) {
