@@ -412,7 +412,7 @@
         </div>
     </div>
 
-    <!-- 答錯診斷與防禦分析 Overlay -->
+       <!-- 答錯診斷與防禦分析 Overlay -->
     <div class="overlay" id="explanationOverlay" style="display: none;">
         <div class="explanation-card">
             <div class="explanation-title">💀 挑戰失敗！數學魔法教室 🔮</div>
@@ -428,11 +428,13 @@
                 <strong style="color: var(--neon-pink);">💡 老師的防禦迷思解析：</strong><br>
                 <span id="wrongExplanation">---</span>
             </div>
+            <!-- 【修改】：按鈕文字改為「重新挑戰此題」，符合實際遊戲邏輯 -->
             <button class="btn-start" style="width: 100%; margin-top: 15px;" onclick="closeExplanationOverlay()">
-                我學會了！繼續下一題 ➔
+                我學會了！重新挑戰此題 ➔
             </button>
         </div>
     </div>
+
 
     <!-- 下一關過渡 Overlay -->
     <div class="overlay" id="nextLevelOverlay" style="display: none;">
