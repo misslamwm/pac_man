@@ -400,22 +400,15 @@
             <b>請選擇您要挑戰的關卡：</b>
         </div>
         
-               <div class="button-group">
+        <div class="button-group">
             <button class="btn-start" onclick="startGame(1)">
                 Level 1 基礎指數定律<br>
-                <span style="font-size:0.9rem; font-weight:normal; opacity:0.8;">1(b) 基礎公式定律</span>
             </button>
             <button class="btn-start btn-level2" onclick="startGame(2)">
                 Level 2 進階指數定律<br>
-                <span style="font-size:0.9rem; font-weight:normal; opacity:0.8;">1(a) & 1(b) 綜合大進擊</span>
-            </button>
-            <!-- 🆕 【新增】：主目錄的知識重溫按鈕 -->
-            <button class="btn-start" style="border-color: var(--neon-green); color: var(--neon-green); text-shadow: 0 0 8px var(--neon-green);" onclick="openRevision('startOverlay')">
-                📚 知識重溫<br>
-                <span style="font-size:0.9rem; font-weight:normal; opacity:0.8;">指數定律公式預習</span>
             </button>
         </div>
-
+    </div>
 
        <!-- 答錯診斷與防禦分析 Overlay -->
     <div class="overlay" id="explanationOverlay" style="display: none;">
@@ -433,16 +426,19 @@
                 <strong style="color: var(--neon-pink);">💡 老師的防禦迷思解析：</strong><br>
                 <span id="wrongExplanation">---</span>
             </div>
-           <!-- 【修改後的按鈕】 -->
+            <!-- 【修改】：按鈕文字改為「重新挑戰此題」，符合實際遊戲邏輯 -->
             <button class="btn-start" style="width: 100%; margin-top: 15px;" onclick="closeExplanationOverlay()">
                 我學會了！重新挑戰此題 ➔
             </button>
         </div>
     </div>
 
-        <!-- 【修改後的 HTML 過渡說明文字】 -->
 
-       <div class="overlay-desc" id="nextLevelDesc">
+    <!-- 下一關過渡 Overlay -->
+    <div class="overlay" id="nextLevelOverlay" style="display: none;">
+        <div class="overlay-title" style="color: var(--neon-blue); text-shadow: 0 0 15px var(--neon-blue)">🎉 第一關挑戰成功！</div>
+              <!-- 【修改】：將過渡畫面的 LaTeX 原文替換為優雅的數學上標 -->
+        <div class="overlay-desc" id="nextLevelDesc">
             做得太棒了！你完美掌握了整數指數定律的五大基礎公式。<br><br>
             準備好進入<b>「第二關：終極指數大師」</b>了嗎？<br>
             第二關將加入 <b>零指數 (<i>a</i>⁰ = 1)</b> 與 <b>負指數 (<i>a</i>⁻ⁿ = 1/<i>a</i>ⁿ)</b> 混合運算！<br><br>
@@ -461,13 +457,11 @@
         <div class="overlay-desc" id="gameOverDesc">
             別灰心！指數定律需要多加練習。你可以重新挑戰本關卡！
         </div>
-       <div class="button-group">
-    <button class="btn-start" style="border-color: var(--neon-pink); text-shadow: 0 0 8px var(--neon-pink);" onclick="retryCurrentLevel()">重新挑戰本關</button>
-    <!-- 🆕 就在這裏插入綠色按鈕 -->
-    <button class="btn-start" style="border-color: var(--neon-green); color: var(--neon-green); text-shadow: 0 0 8px var(--neon-green);" onclick="openRevision('gameOverOverlay')">📚 知識重溫</button>
-    <button class="btn-start" style="border-color: #aaa; color: #aaa; text-shadow: none;" onclick="resetToHome()">返回主選單</button>
-</div>
-
+        <div class="button-group">
+            <button class="btn-start" style="border-color: var(--neon-pink); text-shadow: 0 0 8px var(--neon-pink);" onclick="retryCurrentLevel()">重新挑戰本關</button>
+            <button class="btn-start" style="border-color: #aaa; color: #aaa; text-shadow: none;" onclick="resetToHome()">返回主選單</button>
+        </div>
+    </div>
 
     <!-- 終極勝利 Overlay -->
     <div class="overlay" id="victoryOverlay" style="display: none;">
@@ -480,49 +474,6 @@
         </div>
         <button class="btn-start" onclick="resetToHome()">返回主選單</button>
     </div>
-<!-- 📚 知識重溫 Overlay (預習指數定律) -->
-<div class="overlay" id="revisionOverlay" style="display: none; overflow-y: auto; padding: 20px;">
-    <div class="explanation-card" style="max-width: 600px; border-color: var(--neon-green); box-shadow: 0 0 35px var(--neon-green); max-height: 85vh; overflow-y: auto;">
-        <div class="explanation-title" style="color: var(--neon-green); text-shadow: 0 0 10px var(--neon-green); font-size: 1.8rem; margin-bottom: 15px;">📚 指數定律知識重溫 📚</div>
-        
-        <div class="explanation-box" style="border-color: rgba(57, 255, 20, 0.3); font-size: 1.1rem; line-height: 1.6; color: #e0ffe0; width: 100%;">
-            
-            <!-- 1. 整數指數定律 -->
-            <h3 style="color: var(--neon-yellow); margin-bottom: 10px; border-bottom: 1px solid rgba(255, 234, 0, 0.3); padding-bottom: 4px; font-size: 1.3rem;">1. 整數指數定律</h3>
-            <p style="margin-bottom: 12px; font-size: 0.95rem; color: #ccc;">若 <i>m</i> 和 <i>n</i> 都是整數及 <i>a</i>, <i>b</i> ≠ 0，則：</p>
-            <ul style="list-style-type: none; padding-left: 10px; margin-bottom: 20px;">
-                <li style="margin-bottom: 8px;"><b>(i) 同底相乘：</b> <i>aᵐ</i> × <i>aⁿ</i> = <i>aᵐ⁺ⁿ</i></li>
-                <li style="margin-bottom: 8px;"><b>(ii) 同底相除：</b> <i>aᵐ</i> ÷ <i>aⁿ</i> = <i>aᵐ⁻ⁿ</i></li>
-                <li style="margin-bottom: 8px;"><b>(iii) 乘方的乘方：</b> (<i>aᵐ</i>)ⁿ = <i>aᵐˣⁿ</i></li>
-                <li style="margin-bottom: 8px;"><b>(iv) 積的乘方：</b> (<i>ab</i>)ⁿ = <i>aⁿbⁿ</i></li>
-                <li style="margin-bottom: 8px;"><b>(v) 商的乘方：</b> (<i>a</i>/<i>b</i>)ⁿ = <i>aⁿ</i>/<i>bⁿ</i></li>
-            </ul>
-            
-            <!-- 2. 零指數 -->
-            <h3 style="color: var(--neon-yellow); margin-bottom: 10px; border-bottom: 1px solid rgba(255, 234, 0, 0.3); padding-bottom: 4px; font-size: 1.3rem;">2. 零指數</h3>
-            <p style="margin-bottom: 12px; font-size: 0.95rem; color: #ccc;">若 <i>a</i> ≠ 0，則：</p>
-            <ul style="list-style-type: none; padding-left: 10px; margin-bottom: 20px;">
-                <li style="margin-bottom: 8px;"><b>(i) 任何非零數的零次方皆為 1：</b> <i>a</i>⁰ = 1</li>
-            </ul>
-            
-            <!-- 3. 負指數 -->
-            <h3 style="color: var(--neon-yellow); margin-bottom: 10px; border-bottom: 1px solid rgba(255, 234, 0, 0.3); padding-bottom: 4px; font-size: 1.3rem;">3. 負指數</h3>
-            <p style="margin-bottom: 12px; font-size: 0.95rem; color: #ccc;">若 <i>a</i> ≠ 0 及 <i>n</i> 是一個正整數，則：</p>
-            <ul style="list-style-type: none; padding-left: 10px; margin-bottom: 5px;">
-                <!-- 運用 HTML 直立分數線技術，顯示完美的倒數真分數 -->
-                <li style="margin-bottom: 8px;"><b>(i) 負指數代表倒數：</b> <i>a</i>⁻ⁿ = <span style="display: inline-block; vertical-align: middle; text-align: center; margin: 0 4px;"><span style="display: block; border-bottom: 1.5px solid #fff; padding: 0 6px; font-size: 0.95rem; line-height: 1.1;">1</span><span style="display: block; font-size: 0.95rem; line-height: 1.1;"><i>aⁿ</i></span></span></li>
-            </ul>
-            
-        </div>
-        
-        <button class="btn-start" style="border-color: var(--neon-green); color: var(--neon-green); text-shadow: 0 0 8px var(--neon-green); width: 100%; margin-top: 15px; padding: 12px;" onclick="closeRevision()">
-            關閉並返回 ➔
-        </button>
-    </div>
-</div>
-
-
-<!-- 遊戲主體 --> <!-- 👈 貼在原本這行字的上方 -->
 
     <!-- 遊戲主體 -->
     <div class="game-wrapper" id="gameWrapper">
