@@ -1,0 +1,580 @@
+// ============================================================================
+// 指數吃豆人：跨平台終極挑戰 (Indices PAC-MAN Ultimate) - 核心遊戲引擎
+// ============================================================================
+
+// 1. 關卡與題庫設定 (化簡目標使用標準 LaTeX 格式)
+const QUESTIONS = {
+    1: [
+        { q: "a^2 \\times a^3", options: ["a^5", "a^6", "a^{-1}", "a^8"], ans: "a^5" },
+        { q: "x^8 \\div x^2", options: ["x^6", "x^4", "x^{10}", "x^{16}"], ans: "x^6" },
+        { q: "(y^3)^4", options: ["y^{12}", "y^7", "y^1", "y^{81}"], ans: "y^{12}" },
+        { q: "a^5 \\times a", options: ["a^6", "a^5", "a^4", "a^7"], ans: "a^6" },
+        { q: "(ab)^3", options: ["a^3b^3", "a^3b", "ab^3", "a^3b^4"], ans: "a^3b^3" },
+        { q: "m^7 \\div m^6", options: ["m", "m^{13}", "1", "m^6"], ans: "m" },
+        { q: "(k^2)^5 \\times k^3", options: ["k^{13}", "k^{10}", "k^{30}", "k^8"], ans: "k^{13}" },
+        { q: "(x^2y)^3", options: ["x^6y^3", "x^5y^3", "x^6y", "x^2y^3"], ans: "x^6y^3" },
+        { q: "p^{10} \\div (p^2)^3", options: ["p^4", "p^8", "p^5", "p^6"], ans: "p^4" },
+        { q: "(x^3 \\div x)^2", options: ["x^4", "x^5", "x^6", "x^2"], ans: "x^4" }
+    ],
+    2: [
+        { q: "a^0", options: ["1", "a", "0", "-1"], ans: "1" },
+        { q: "x^{-3}", options: ["1/x^3", "-x^3", "-3x", "1/x^{-3}"], ans: "1/x^3" },
+        { q: "x^2 \\times x^{-5}", options: ["1/x^3", "x^7", "x^{-10}", "1/x^{-3}"], ans: "1/x^3" },
+        { q: "(y^{-2})^3", options: ["1/y^6", "y^6", "y^{-5}", "1/y^5"], ans: "1/y^6" },
+        { q: "a^4 \\div a^4", options: ["1", "a", "a^8", "0"], ans: "1" },
+        { q: "(2a)^{-1}", options: ["1/(2a)", "2/a", "-2a", "1/2a^{-1}"], ans: "1/(2a)" },
+        { q: "3x^0", options: ["3", "1", "0", "3x"], ans: "3" },
+        { q: "x^{-2} \\div x^3", options: ["1/x^5", "1/x", "x", "x^5"], ans: "1/x^5" },
+        { q: "(a^{-1}b^2)^2", options: ["b^4/a^2", "a^2b^4", "b^4/a", "1/(a^2b^4)"], ans: "b^4/a^2" },
+        { q: "(x^2 \\cdot x^0)^{-3}", options: ["1/x^6", "1/x^5", "x^6", "1"], ans: "1/x^6" }
+    ]
+};
+
+// 2. 地圖設定 (13x13 經典迷宮網格)
+// 1 = 牆壁, 0 = 通道, 2 = 吃豆人起點
+const MAP = [
+    [1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,0,0,0,0,0,1,0,0,0,0,0,1],
+    [1,0,1,1,0,1,1,1,0,1,1,0,1],
+    [1,0,1,0,0,0,0,0,0,0,1,0,1],
+    [1,0,0,0,1,1,0,1,1,0,0,0,1],
+    [1,1,1,0,1,0,0,0,1,0,1,1,1],
+    [1,0,0,0,1,0,2,0,1,0,0,0,1],
+    [1,1,1,0,1,1,1,1,1,0,1,1,1],
+    [1,0,0,0,1,0,0,0,1,0,0,0,1],
+    [1,0,1,1,1,0,1,0,1,1,1,0,1],
+    [1,0,0,0,0,0,1,0,0,0,0,0,1],
+    [1,0,1,1,0,1,1,1,0,1,1,0,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1]
+];
+
+const TILE_SIZE = 40; // 520 px 寬高 (13 * 40 px)
+
+// 3. 遊戲狀態與角色實體
+let currentLevel = 1;
+let currentQuestionIndex = 0;
+let score = 0;
+let lives = 3;
+let gameOver = false;
+let gameInterval = null;
+let player = null;
+let ghosts = [];
+const ghostColors = ["#ff0000", "#ffb8ff", "#00ffff", "#ffb852"]; // 幽靈專用霓虹色
+
+// 吃豆人類別 (Pacman)
+class Pacman {
+    constructor(gridX, gridY) {
+        this.gridX = gridX;
+        this.gridY = gridY;
+        this.x = gridX * TILE_SIZE + TILE_SIZE / 2;
+        this.y = gridY * TILE_SIZE + TILE_SIZE / 2;
+        this.radius = 16;
+        
+        // 【控制優化】調慢移動速度從 3 降到 2，提供玩家充足的反應時間與絕佳操控感！
+        this.speed = 2; 
+        
+        this.dirX = 0;
+        this.dirY = 0;
+        this.nextDirX = 0;
+        this.nextDirY = 0;
+        this.angle = 0.2; // 嘴巴開合動畫
+        this.mouthClosing = false;
+    }
+
+    update() {
+        const currentTargetX = this.gridX * TILE_SIZE + TILE_SIZE / 2;
+        const currentTargetY = this.gridY * TILE_SIZE + TILE_SIZE / 2;
+        const distanceToCenter = Math.sqrt((this.x - currentTargetX)**2 + (this.y - currentTargetY)**2);
+        
+        // 當吃豆人到達網格中心點時，進行轉彎判斷
+        if (distanceToCenter < this.speed) {
+            this.x = currentTargetX;
+            this.y = currentTargetY;
+
+            // 【操作優化】預備方向緩衝 (Buffer Input) 機制：
+            // 如果玩家提前輸入了下一個方向 (nextDir)，且該方向暢通無阻，則立即轉向！這保證了 100% 不會滑過路口！
+            if (this.canMove(this.nextDirX, this.nextDirY)) {
+                this.dirX = this.nextDirX;
+                this.dirY = this.nextDirY;
+            } else if (!this.canMove(this.dirX, this.dirY)) {
+                // 如果目前的移動方向撞牆了，則停下
+                this.dirX = 0;
+                this.dirY = 0;
+            }
+
+            this.gridX += this.dirX;
+            this.gridY += this.dirY;
+        }
+
+        this.x += this.dirX * this.speed;
+        this.y += this.dirY * this.speed;
+
+        // 嘴巴開合動畫
+        if (this.mouthClosing) {
+            this.angle -= 0.02;
+            if (this.angle <= 0.05) this.mouthClosing = false;
+        } else {
+            this.angle += 0.02;
+            if (this.angle >= 0.25) this.mouthClosing = true;
+        }
+    }
+
+    canMove(dx, dy) {
+        const nextGridX = this.gridX + dx;
+        const nextGridY = this.gridY + dy;
+        if (nextGridX < 0 || nextGridX >= MAP[0].length || nextGridY < 0 || nextGridY >= MAP.length) return false;
+        return MAP[nextGridY][nextGridX] !== 1;
+    }
+
+    draw(ctx) {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+
+        // 依移動方向旋轉吃豆人的朝向
+        let rotation = 0;
+        if (this.dirX === 1) rotation = 0;
+        else if (this.dirX === -1) rotation = Math.PI;
+        else if (this.dirY === 1) rotation = Math.PI / 2;
+        else if (this.dirY === -1) rotation = -Math.PI / 2;
+        ctx.rotate(rotation);
+
+        ctx.beginPath();
+        ctx.arc(0, 0, this.radius, this.angle * Math.PI, (2 - this.angle) * Math.PI);
+        ctx.lineTo(0, 0);
+        ctx.fillStyle = '#ffea00';
+        ctx.fill();
+        ctx.closePath();
+
+        // 畫眼睛
+        ctx.beginPath();
+        ctx.arc(2, -8, 2.5, 0, 2 * Math.PI);
+        ctx.fillStyle = '#000';
+        ctx.fill();
+        ctx.closePath();
+
+        ctx.restore();
+    }
+}
+
+// 幽靈類別 (Ghost)
+class Ghost {
+    constructor(gridX, gridY, color, label, isCorrect) {
+        this.gridX = gridX;
+        this.gridY = gridY;
+        this.x = gridX * TILE_SIZE + TILE_SIZE / 2;
+        this.y = gridY * TILE_SIZE + TILE_SIZE / 2;
+        this.radius = 16;
+        
+        // 【控制優化】調慢幽靈速度至 1 像素/幀，降低難度，讓學習節奏更舒適
+        this.speed = 1.0; 
+        
+        this.color = color;
+        this.label = label;
+        this.isCorrect = isCorrect;
+        this.dirX = 0;
+        this.dirY = -1;
+    }
+
+    update() {
+        const currentTargetX = this.gridX * TILE_SIZE + TILE_SIZE / 2;
+        const currentTargetY = this.gridY * TILE_SIZE + TILE_SIZE / 2;
+        const distanceToCenter = Math.sqrt((this.x - currentTargetX)**2 + (this.y - currentTargetY)**2);
+
+        if (distanceToCenter < this.speed) {
+            this.x = currentTargetX;
+            this.y = currentTargetY;
+
+            // 尋找可以移動的方向分支 (AI 行為)
+            const directions = [
+                {x: 1, y: 0}, {x: -1, y: 0}, {x: 0, y: 1}, {x: 0, y: -1}
+            ];
+            
+            const validDirs = directions.filter(d => {
+                const nextGridX = this.gridX + d.x;
+                const nextGridY = this.gridY + d.y;
+                if (nextGridX < 0 || nextGridX >= MAP[0].length || nextGridY < 0 || nextGridY >= MAP.length) return false;
+                if (MAP[nextGridY][nextGridX] === 1) return false;
+                if (d.x === -this.dirX && d.y === -this.dirY) return false; // 優先不走回頭路
+                return true;
+            });
+
+            let chosenDir = null;
+            if (validDirs.length > 0) {
+                chosenDir = validDirs[Math.floor(Math.random() * validDirs.length)];
+            } else {
+                chosenDir = { x: -this.dirX, y: -this.dirY };
+            }
+
+            this.dirX = chosenDir.x;
+            this.dirY = chosenDir.y;
+            this.gridX += this.dirX;
+            this.gridY += this.dirY;
+        }
+
+        this.x += this.dirX * this.speed;
+        this.y += this.dirY * this.speed;
+    }
+
+    draw(ctx) {
+        ctx.save();
+        
+        // 1. 繪製幽靈身體
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y - 2, this.radius, Math.PI, 0, false);
+        ctx.lineTo(this.x + this.radius, this.y + this.radius);
+        const waveY = this.y + this.radius;
+        const waveStep = (this.radius * 2) / 3;
+        ctx.lineTo(this.x + this.radius - waveStep * 0.5, waveY - 4);
+        ctx.lineTo(this.x + this.radius - waveStep, waveY);
+        ctx.lineTo(this.x - this.radius + waveStep, waveY - 4);
+        ctx.lineTo(this.x - this.radius, waveY);
+        ctx.lineTo(this.x - this.radius, this.y - 2);
+        ctx.fill();
+        ctx.closePath();
+
+        // 2. 大白眼與轉動眼珠
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(this.x - 6, this.y - 4, 4.5, 0, 2 * Math.PI);
+        ctx.arc(this.x + 6, this.y - 4, 4.5, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.closePath();
+
+        ctx.fillStyle = '#00f';
+        ctx.beginPath();
+        const pupilDx = this.dirX * 2;
+        const pupilDy = this.dirY * 2;
+        ctx.arc(this.x - 6 + pupilDx, this.y - 4 + pupilDy, 2, 0, 2 * Math.PI);
+        ctx.arc(this.x + 6 + pupilDx, this.y - 4 + pupilDy, 2, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.closePath();
+
+        // 3. 繪製頭頂的題目答案對話框 (Unicode 精美數學格式)
+        ctx.font = "bold 13px Arial";
+        const cleanText = this.label;
+        const textWidth = ctx.measureText(cleanText).width;
+        
+        ctx.fillStyle = "rgba(0, 0, 0, 0.85)";
+        ctx.strokeStyle = this.color;
+        ctx.lineWidth = 1.5;
+        
+        const boxW = textWidth + 14;
+        const boxH = 20;
+        const boxX = this.x - boxW / 2;
+        const boxY = this.y - this.radius - 22;
+        
+        ctx.beginPath();
+        ctx.roundRect(boxX, boxY, boxW, boxH, 6);
+        ctx.fill();
+        ctx.stroke();
+        ctx.closePath();
+
+        // 將 LaTeX 上標等格式簡化轉換成好讀的 unicode 字元
+        ctx.fillStyle = "#ffffff";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        const displayLabel = formatLatexToUnicode(this.label);
+        ctx.fillText(displayLabel, this.x, boxY + boxH / 2);
+
+        ctx.restore();
+    }
+}
+
+// 輔助函數：將分數上標格式（a^5 -> a⁵）對應成高解析的字體顯示在 Canvas 幽靈對話框上
+function formatLatexToUnicode(str) {
+    if (!str) return "";
+    let res = str;
+    // 轉換乘除符號為精美學術符號
+    res = res.replace(/\\times/g, ' × ');
+    res = res.replace(/\\div/g, ' ÷ ');
+    res = res.replace(/\\cdot/g, ' · ');
+    res = res.replace(/[{}]/g, ''); // 移除 LaTeX 大括號
+    
+    const superscripts = {
+        '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴', 
+        '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹',
+        '-': '⁻', 'a': 'ᵃ', 'b': 'ᵇ', 'n': 'ⁿ', 'm': 'ᵐ'
+    };
+    
+    if (res.includes('^')) {
+        const parts = res.split('^');
+        let base = parts[0];
+        let power = parts[1];
+        let unicodePower = "";
+        for (let char of power) {
+            unicodePower += superscripts[char] || char;
+        }
+        return base + unicodePower;
+    }
+    return res;
+}
+
+// 4. 【學術優化】使用 KaTeX 動態渲染化簡目標 (讓數學公式變完美！)
+function renderMath(latexText, elementId) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    
+    // 如果 KaTeX 庫成功從 CDN 載入，則使用高解析排版
+    if (typeof katex !== 'undefined') {
+        try {
+            katex.render(latexText, el, {
+                throwOnError: false,
+                displayMode: false
+            });
+            return;
+        } catch (e) {
+            console.error("KaTeX 渲染失敗，改用備份文字渲染:", e);
+        }
+    }
+    
+    // 備份方案：使用 Unicode 上標顯示
+    el.innerText = formatLatexToUnicode(latexText);
+}
+
+// 5. 載入新題目並部署幽靈
+function loadQuestion() {
+    const qList = QUESTIONS[currentLevel];
+    if (currentQuestionIndex >= qList.length) {
+        if (currentLevel === 1) {
+            showOverlay('nextLevelOverlay');
+        } else {
+            showOverlay('victoryOverlay');
+        }
+        if (gameInterval) clearInterval(gameInterval);
+        return;
+    }
+
+    const curQ = qList[currentQuestionIndex];
+    
+    // 【完美數學格式】透過 KaTeX 在網頁上完美呈現 LaTeX 公式
+    renderMath(curQ.q, 'questionText');
+    
+    document.getElementById('progressText').innerText = `${currentQuestionIndex} / ${qList.length}`;
+    document.getElementById('progressBar').style.width = `${(currentQuestionIndex / qList.length) * 100}%`;
+
+    // 每次重置吃豆人在地圖正中心
+    player = new Pacman(6, 6);
+
+    // 在迷宮 4 個角落擺放攜帶答案的幽靈
+    ghosts = [];
+    const spawnPositions = [
+        {x: 1, y: 1}, {x: 11, y: 1}, {x: 1, y: 11}, {x: 11, y: 11}
+    ];
+
+    // 打亂答案選項排序
+    const shuffledOptions = [...curQ.options].sort(() => Math.random() - 0.5);
+
+    for (let i = 0; i < 4; i++) {
+        const pos = spawnPositions[i];
+        const opt = shuffledOptions[i];
+        const isCorrect = (opt === curQ.ans);
+        ghosts.push(new Ghost(pos.x, pos.y, ghostColors[i], opt, isCorrect));
+    }
+}
+
+// 6. 遊戲全域控制
+function startGame(level) {
+    currentLevel = level;
+    currentQuestionIndex = 0;
+    score = 0;
+    lives = 3;
+    gameOver = false;
+
+    // UI 設定
+    document.getElementById('levelBadge').innerText = `Level ${level}`;
+    document.getElementById('scoreVal').innerText = score;
+    updateLivesUI();
+    hideAllOverlays();
+    
+    loadQuestion();
+
+    // 【控制聚焦優化】主動將鍵盤焦點鎖定至 window ＆ Canvas，免去任何額外的點擊，保證玩家能立即暢玩！
+    window.focus();
+    const canvas = document.getElementById('gameCanvas');
+    if (canvas) {
+        canvas.focus();
+    }
+
+    // 啟動每秒 60 幀渲染畫布的主循環
+    const ctx = canvas.getContext('2d');
+    if (gameInterval) clearInterval(gameInterval);
+    gameInterval = setInterval(() => {
+        updateGame(ctx, canvas);
+    }, 1000 / 60);
+}
+
+function updateLivesUI() {
+    let hearts = "";
+    for (let i = 0; i < lives; i++) hearts += "❤️";
+    document.getElementById('livesVal').innerText = hearts || "💀";
+}
+
+function setDirection(dir) {
+    if (!player) return;
+    switch(dir) {
+        case 'up': player.nextDirX = 0; player.nextDirY = -1; break;
+        case 'down': player.nextDirX = 0; player.nextDirY = 1; break;
+        case 'left': player.nextDirX = -1; player.nextDirY = 0; break;
+        case 'right': player.nextDirX = 1; player.nextDirY = 0; break;
+    }
+}
+
+// 【控制焦點守護者】當玩家點擊 Canvas 或網頁其他部分，主動將焦點拉回 Canvas，保證鍵盤控制永不失效！
+document.addEventListener('click', () => {
+    const canvas = document.getElementById('gameCanvas');
+    if (canvas) canvas.focus();
+});
+
+// 【標準控制註冊】綁定 keydown 事件至全域 document，全面防範焦點遺失，並阻止預設的網頁捲動行徑
+document.addEventListener('keydown', (e) => {
+    if (!player || gameOver) return;
+    
+    let handled = false;
+    switch(e.key.toLowerCase()) {
+        case 'w':
+        case 'arrowup':
+            setDirection('up');
+            handled = true;
+            break;
+        case 's':
+        case 'arrowdown':
+            setDirection('down');
+            handled = true;
+            break;
+        case 'a':
+        case 'arrowleft':
+            setDirection('left');
+            handled = true;
+            break;
+        case 'd':
+        case 'arrowright':
+            setDirection('right');
+            handled = true;
+            break;
+    }
+    
+    if (handled) {
+        e.preventDefault(); // 防止鍵盤方向鍵導致整個網頁上下捲動
+    }
+});
+
+// 7. 主運作與更新引擎
+function updateGame(ctx, canvas) {
+    if (gameOver) return;
+
+    player.update();
+    ghosts.forEach(ghost => ghost.update());
+
+    // 碰撞檢查 (吃豆人與幽靈相撞)
+    for (let i = 0; i < ghosts.length; i++) {
+        const ghost = ghosts[i];
+        const dist = Math.sqrt((player.x - ghost.x)**2 + (player.y - ghost.y)**2);
+        
+        if (dist < 22) { // 判定相碰
+            if (ghost.isCorrect) {
+                // 吃對答案：加分、閃綠光並前進一題
+                score += 10;
+                document.getElementById('scoreVal').innerText = score;
+                currentQuestionIndex++;
+                drawScreenFlash(ctx, canvas, "rgba(57, 255, 20, 0.3)");
+                
+                setTimeout(() => {
+                    loadQuestion();
+                }, 150);
+            } else {
+                // 吃錯答案：扣血、閃紅光、重新分配起點
+                lives--;
+                updateLivesUI();
+                drawScreenFlash(ctx, canvas, "rgba(255, 0, 127, 0.4)");
+
+                if (lives <= 0) {
+                    gameOver = true;
+                    showOverlay('gameOverOverlay');
+                    if (gameInterval) clearInterval(gameInterval);
+                } else {
+                    // 還留有生命，僅重置角色與幽靈位置
+                    player = new Pacman(6, 6);
+                    ghosts.forEach((g, idx) => {
+                        const spawnPositions = [
+                            {x: 1, y: 1}, {x: 11, y: 1}, {x: 1, y: 11}, {x: 11, y: 11}
+                        ];
+                        g.gridX = spawnPositions[idx].x;
+                        g.gridY = spawnPositions[idx].y;
+                        g.x = g.gridX * TILE_SIZE + TILE_SIZE / 2;
+                        g.y = g.gridY * TILE_SIZE + TILE_SIZE / 2;
+                        g.dirX = 0;
+                        g.dirY = -1;
+                    });
+                }
+            }
+            break;
+        }
+    }
+
+    // 繪製迷宮與角色
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawMap(ctx);
+    drawBackgroundDots(ctx);
+    player.draw(ctx);
+    ghosts.forEach(ghost => ghost.draw(ctx));
+}
+
+// 繪圖輔助方法
+function drawScreenFlash(ctx, canvas, colorStyle) {
+    ctx.fillStyle = colorStyle;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+}
+
+function drawMap(ctx) {
+    for (let r = 0; r < MAP.length; r++) {
+        for (let c = 0; c < MAP[r].length; c++) {
+            if (MAP[r][c] === 1) {
+                ctx.fillStyle = "#121424";
+                ctx.fillRect(c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                
+                ctx.strokeStyle = "#00f0ff";
+                ctx.lineWidth = 2;
+                ctx.strokeRect(c * TILE_SIZE + 2, r * TILE_SIZE + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+            }
+        }
+    }
+}
+
+function drawBackgroundDots(ctx) {
+    for (let r = 0; r < MAP.length; r++) {
+        for (let c = 0; c < MAP[r].length; c++) {
+            if (MAP[r][c] === 0) {
+                if (r === 6 && c === 6) continue;
+                ctx.beginPath();
+                ctx.arc(c * TILE_SIZE + TILE_SIZE/2, r * TILE_SIZE + TILE_SIZE/2, 2.5, 0, 2 * Math.PI);
+                ctx.fillStyle = "rgba(0, 240, 255, 0.4)";
+                ctx.fill();
+                ctx.closePath();
+            }
+        }
+    }
+}
+
+// Overlay 畫面顯示輔助
+function showOverlay(id) {
+    hideAllOverlays();
+    document.getElementById(id).style.display = 'flex';
+}
+
+function hideAllOverlays() {
+    const overlays = ['startOverlay', 'nextLevelOverlay', 'gameOverOverlay', 'victoryOverlay'];
+    overlays.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
+}
+
+function resetToHome() {
+    if (gameInterval) clearInterval(gameInterval);
+    showOverlay('startOverlay');
+}
+
+function retryCurrentLevel() {
+    startGame(currentLevel);
+}
