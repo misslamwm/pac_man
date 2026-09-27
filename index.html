@@ -400,15 +400,22 @@
             <b>請選擇您要挑戰的關卡：</b>
         </div>
         
-        <div class="button-group">
+               <div class="button-group">
             <button class="btn-start" onclick="startGame(1)">
                 Level 1 基礎指數定律<br>
+                <span style="font-size:0.9rem; font-weight:normal; opacity:0.8;">1(b) 基礎公式定律</span>
             </button>
             <button class="btn-start btn-level2" onclick="startGame(2)">
                 Level 2 進階指數定律<br>
+                <span style="font-size:0.9rem; font-weight:normal; opacity:0.8;">1(a) & 1(b) 綜合大進擊</span>
+            </button>
+            <!-- 🆕 【新增】：主目錄的知識重溫按鈕 -->
+            <button class="btn-start" style="border-color: var(--neon-green); color: var(--neon-green); text-shadow: 0 0 8px var(--neon-green);" onclick="openRevision('startOverlay')">
+                📚 知識重溫<br>
+                <span style="font-size:0.9rem; font-weight:normal; opacity:0.8;">指數定律公式預習</span>
             </button>
         </div>
-    </div>
+
 
        <!-- 答錯診斷與防禦分析 Overlay -->
     <div class="overlay" id="explanationOverlay" style="display: none;">
